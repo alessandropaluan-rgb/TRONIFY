@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tronify">
+    
+    <title>Tronify: Cyber Neon Arena</title>
+    
+    <link rel="manifest" id="manifest-link">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+        :root {
+            --bg-dark: #000000;
+            --cyber-blue: #00f2ff;
+            --cyber-pink: #ff00ff;
+            --cyber-yellow: #fefe00;
+            --cyber-green: #39ff14;
+            --cyber-red: #ff003c;
+            --panel-bg: rgba(0, 0, 0, 0.96);
+            --current-accent: var(--cyber-blue);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            user-select: none;
+            margin: 0; padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+        }
+
+        body {
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            height: 100dvh; 
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        canvas { 
+            width: 100%; 
+            height: auto; 
+            aspect-ratio: 1/1;
+            background: #000;
+            touch-action: none;
+            border-top: 2px solid var(--current-accent);
+            border-bottom: 2px solid var(--current-accent);
+            transition: border-color 0.5s ease;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--panel-bg);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: calc(10px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
+            text-align: center;
+            backdrop-filter: blur(15px);
+            overflow-y: auto;
+        }
+
+        .game-logo-icon {
+            width: clamp(40px, 10vh, 60px);
+            height: clamp(40px, 10vh, 60px);
+            margin-bottom: 5px;
+            filter: drop-shadow(0 0 8px var(--current-accent));
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: clamp(1.8rem, 10vw, 3rem);
+            margin-bottom: 1rem;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            text-shadow: 2px 2px var(--cyber-pink), -1px -1px var(--cyber-blue);
+            font-weight: 900;
+        }
+
+        .tab-nav { 
+            display: flex; flex-wrap: wrap; gap: 6px; 
+            margin-bottom: 15px; width: 100%; max-width: 450px; flex-shrink: 0;
+        }
+
+        .tab-btn {
+            flex: 1 1 20%; padding: 10px 2px; background: rgba(255,255,255,0.05);
+            border: 1px solid var(--cyber-blue); color: var(--cyber-blue);
+            font-family: inherit; font-size: clamp(0.4rem, 2vw, 0.55rem); 
+            text-transform: uppercase; cursor: pointer; border-radius: 8px; 
+            font-weight: 700; transition: 0.2s;
+        }
+        .tab-btn.active { background: var(--cyber-blue); color: #000; box-shadow: 0 0 12px var(--cyber-blue); }
+
+        .tab-content { 
+            display: none; width: 100%; max-width: 400px; flex-direction: column; 
+            align-items: center; overflow-y: auto; max-height: 50vh; padding: 5px;
+        }
+        .tab-content.active { display: flex; animation: fadeIn 0.3s forwards; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .section-label { font-size: 0.6rem; color: var(--cyber-pink); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 2px; font-weight: bold; }
+
+        .color-grid { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; }
+        .color-opt { width: 38px; height: 38px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: 0.2s; }
+        .color-opt.active { border-color: #fff; box-shadow: 0 0 12px currentColor; transform: scale(1.1); }
+
+        .btn-opt { flex: 1; padding: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--cyber-blue); color: var(--cyber-blue); cursor: pointer; font-family: inherit; font-size: 0.8rem; border-radius: 8px; }
+        .btn-opt.active { background: var(--cyber-blue); color: #000; font-weight: 800; }
+
+        .btn-start {
+            margin-top: 15px; padding: 18px 0; width: 100%; max-width: 320px;
+            background: transparent; color: #fff; border: 2px solid #fff;
+            text-transform: uppercase; letter-spacing: 5px; font-weight: 900; border-radius: 12px;
+            font-size: 1rem; cursor: pointer; flex-shrink: 0;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-start:active { background: #fff; color: #000; transform: scale(0.96); }
+        .btn-start.pulse { animation: neonPulse 2s infinite; }
+
+        @keyframes neonPulse {
+            0% { border-color: #fff; box-shadow: 0 0 5px #fff; }
+            50% { border-color: var(--cyber-blue); box-shadow: 0 0 15px var(--cyber-blue); }
+            100% { border-color: #fff; box-shadow: 0 0 5px #fff; }
+        }
+
+        #hud {
+            position: absolute; top: calc(10px + env(safe-area-inset-top, 10px)); left: 15px; right: 15px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            font-size: 0.8rem; color: var(--cyber-blue); z-index: 50; pointer-events: none;
+        }
+        .quit-trigger { pointer-events: auto; background: rgba(255, 0, 0, 0.15); border: 1px solid var(--cyber-red); color: var(--cyber-red); padding: 8px 14px; border-radius: 8px; font-family: inherit; font-size: 0.65rem; font-weight: bold; }
+
+        .lives-container { display: flex; gap: 5px; margin-top: 5px; }
+        .heart { font-size: 1.1rem; color: var(--cyber-red); filter: drop-shadow(0 0 5px var(--cyber-red)); }
+        .heart.lost { opacity: 0.2; filter: grayscale(1); }
+
+        #turbo-indicator { 
+            position: absolute; bottom: calc(30px + env(safe-area-inset-bottom, 20px)); 
+            left: 50%; transform: translateX(-50%); width: 60%; max-width: 250px; height: 8px; 
+            background: rgba(255,255,255,0.1); border-radius: 4px; z-index: 50; 
+        }
+        #turbo-fill { height: 100%; background: var(--cyber-pink); border-radius: 4px; width: 100%; transition: width 0.1s linear; }
+
+        .leaderboard-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; color: #fff; background: rgba(255,255,255,0.02); border-radius: 8px; }
+        .leaderboard-table th { text-align: left; padding: 10px; background: rgba(0, 242, 255, 0.1); color: var(--cyber-blue); text-transform: uppercase; font-size: 0.5rem; }
+        .leaderboard-table td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+        #notification-box { position: absolute; top: 80px; left: 5%; width: 90%; background: var(--cyber-blue); color: #000; padding: 12px; border-radius: 8px; font-weight: 900; z-index: 200; display: none; text-align: center; }
+        
+        .credits { position: absolute; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); font-size: 0.4rem; color: rgba(255,255,255,0.15); text-transform: uppercase; letter-spacing: 3px; width: 100%; text-align: center; }
+        
+        .hidden { display: none !important; }
+
+        .tut-step { margin-bottom: 12px; display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; }
+        .tut-icon { font-size: 1.2rem; width: 30px; text-align: center; }
+        .tut-txt { font-size: 0.65rem; line-height: 1.4; color: #bbb; }
+    </style>
+</head>
+<body onclick="resumeAudioContext()" oncontextmenu="return false;">
+
+    <div id="notification-box">SISTEMA AGGIORNATO</div>
+
+    <div id="game-container">
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+            <div>
+                <div id="hud-cap" style="color:var(--cyber-pink); font-size: 0.55rem; letter-spacing: 2px; font-weight: bold;">CHAPTER 1</div>
+                <div style="font-size: 0.9rem; font-weight: 900;">NODI: <span id="hud-kills">00</span></div>
+                <div class="lives-container" id="lives-display"></div>
+            </div>
+            <button class="quit-trigger" onclick="backToMenu()">ESCI</button>
+        </div>
+
+        <div id="turbo-indicator" class="hidden">
+            <div id="turbo-fill"></div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Menu Principale -->
+        <div id="menu" class="overlay">
+            <svg class="game-logo-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M50 5L90 25V75L50 95L10 75V25L50 5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M30 40H70V50L45 50L45 60H65" stroke="var(--cyber-pink)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h1>TRONIFY</h1>
+            
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="switchTab('quick')">Rapida</button>
+                <button class="tab-btn" onclick="switchTab('campaign')">Campagna</button>
+                <button class="tab-btn" onclick="switchTab('leaderboard')">Punti</button>
+                <button class="tab-btn" onclick="switchTab('trophies')">Trofei</button>
+                <button class="tab-btn" onclick="switchTab('tutorial')">Guida</button>
+            </div>
+
+            <div id="tab-quick" class="tab-content active">
+                <span class="section-label">Personalizzazione</span>
+                <div class="color-grid">
+                    <div class="color-opt active" data-color="#00f2ff" style="background:var(--cyber-blue); color:var(--cyber-blue);"></div>
+                    <div class="color-opt" data-color="#ff00ff" style="background:var(--cyber-pink); color:var(--cyber-pink);"></div>
+                    <div class="color-opt" data-color="#39ff14" style="background:var(--cyber-green); color:var(--cyber-green);"></div>
+                    <div class="color-opt" data-color="#fefe00" style="background:var(--cyber-yellow); color:var(--cyber-yellow);"></div>
+                    <div class="color-opt" data-color="#ff003c" style="background:var(--cyber-red); color:var(--cyber-red);"></div>
+                </div>
+                <div style="display:flex; gap:10px; width:100%; margin-bottom:15px;" id="diff-selector">
+                    <button class="btn-opt" data-d="0">FACILE</button>
+                    <button class="btn-opt active" data-d="1">MID</button>
+                    <button class="btn-opt" data-d="2">HARD</button>
+                </div>
+                <button class="btn-start pulse" onclick="initProcess('quick')">START GRID</button>
+            </div>
+
+            <div id="tab-campaign" class="tab-content">
+                <div style="border: 2px solid var(--cyber-pink); padding: 15px; width: 100%; margin-bottom: 15px; border-radius: 12px; background: rgba(255,0,255,0.03);">
+                    <div id="camp-chap-title" style="font-size: 1.1rem; font-weight: 900; color: var(--cyber-blue);">CAPITOLO 1</div>
+                    <div id="camp-lvl-info" style="font-size: 0.7rem; color: var(--cyber-pink); font-weight: bold;">LIVELLO ATTUALE: 1</div>
+                </div>
+                <p id="camp-description" style="font-size: 0.7rem; color: #888; line-height: 1.4; margin-bottom: 15px;"></p>
+                <button class="btn-start pulse" onclick="initProcess('campaign')">CARICA SISTEMA</button>
+            </div>
+
+            <div id="tab-leaderboard" class="tab-content">
+                <table class="leaderboard-table">
+                    <thead><tr><th>Pos</th><th>Data</th><th>Punti</th><th>Modo</th></tr></thead>
+                    <tbody id="leaderboard-tbody"></tbody>
+                </table>
+            </div>
+
+            <div id="tab-trophies" class="tab-content">
+                <div class="trophy-container" id="trophy-list"></div>
+            </div>
+
+            <div id="tab-tutorial" class="tab-content">
+                <span class="section-label">Protocollo di Guida</span>
+                <div class="tut-step">
+                    <div class="tut-icon">👆</div>
+                    <div class="tut-txt"><b>MOVIMENTO:</b> Trascina (Swipe) per girare istantaneamente di 90 gradi.</div>
+                </div>
+                <div class="tut-step">
+                    <div class="tut-icon">🚀</div>
+                    <div class="tut-txt"><b>TURBO:</b> Tieni premuto sullo schermo per accelerare.</div>
+                </div>
+                <div class="tut-step">
+                    <div class="tut-icon">⌨️</div>
+                    <div class="tut-txt"><b>PC:</b> Usa le frecce per girare e la Barra Spaziatrice per il Turbo.</div>
+                </div>
+                <div class="tut-step">
+                    <div class="tut-icon">💀</div>
+                    <div class="tut-txt"><b>OBIETTIVO:</b> Non toccare scie o bordi. Induci gli avversari all'errore.</div>
+                </div>
+                <button class="btn-start" onclick="switchTab('quick')">HO CAPITO</button>
+            </div>
+
+            <div class="credits">a game by Alessandro Paluan</div>
+        </div>
+
+        <!-- Pre-Game / Countdown -->
+        <div id="pre-game" class="overlay hidden">
+            <h2 id="timer-txt" style="font-size: 6rem; color: var(--cyber-blue);">3</h2>
+            <p id="lvl-status" style="color: var(--cyber-pink); font-size: 0.8rem; letter-spacing: 3px; font-weight: 900;"></p>
+        </div>
+
+        <!-- Game Over / Victory -->
+        <div id="game-over" class="overlay hidden">
+            <h1 id="end-status-txt">SCOLLEGATO</h1>
+            <p id="end-score-txt" style="color: var(--cyber-blue); margin-bottom: 20px;"></p>
+            <button class="btn-start pulse" id="retry-btn">RIPROVA</button>
+            <button class="btn-start" onclick="backToMenu()" style="border-color: #333; color: #666; margin-top: 10px;">MENU</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURAZIONE PWA ---
+        const iconSvg = `<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="512" height="512" fill="black"/><path d="M256 50L450 150V362L256 462L62 362V150L256 50Z" stroke="#00f2ff" stroke-width="12"/><path d="M180 220H332V260H240V300H320" stroke="#ff00ff" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        const iconUrl = 'data:image/svg+xml;base64,' + btoa(iconSvg);
+
+        const manifest = {
+            "name": "Tronify: Cyber Neon Arena",
+            "short_name": "Tronify",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#000000",
+            "theme_color": "#00f2ff",
+            "orientation": "portrait",
+            "icons": [{ "src": iconUrl, "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable any" }]
+        };
+        const manifestElem = document.getElementById('manifest-link');
+        if (manifestElem) manifestElem.setAttribute('href', 'data:application/manifest+json;base64,' + btoa(JSON.stringify(manifest)));
+
+        // --- SISTEMA AUDIO ---
+        let audioCtx = null, bgmInterval = null;
+        function resumeAudioContext() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+
+        const AudioSystem = {
+            playBeat: (accentFreq = 41.2) => {
+                if (!audioCtx) return;
+                const master = audioCtx.createGain();
+                master.gain.setValueAtTime(0, audioCtx.currentTime);
+                master.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 1.2);
+                master.connect(audioCtx.destination);
+                const play = (f, t, d) => {
+                    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), fl = audioCtx.createBiquadFilter();
+                    o.type = 'sawtooth'; o.frequency.setValueAtTime(f, t);
+                    fl.type = 'lowpass'; fl.frequency.setValueAtTime(450, t);
+                    fl.frequency.exponentialRampToValueAtTime(60, t + d);
+                    g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
+                    o.connect(fl); fl.connect(g); g.connect(master);
+                    o.start(t); o.stop(t + d);
+                };
+                let s = 0;
+                bgmInterval = setInterval(() => {
+                    const n = [accentFreq, accentFreq, accentFreq * 1.2, accentFreq * 1.5];
+                    play(n[s % 4], audioCtx.currentTime + 0.05, 0.45);
+                    s++;
+                }, 500);
+                AudioSystem.master = master;
+            },
+            stop: () => { if (bgmInterval) clearInterval(bgmInterval); if (AudioSystem.master) AudioSystem.master.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6); }
+        };
+
+        // --- DATABASE E COSTANTI ---
+        const CHAPTERS = [
+            { id: 1, name: "Sotto-Settore", color: '#00f2ff', bg: 'rgba(0, 242, 255, 0.05)', min: 1, max: 2, grid: 120, desc: "Infiltrazione profonda nel mainframe." },
+            { id: 2, name: "Data Breach", color: '#ff00ff', bg: 'rgba(255, 0, 255, 0.05)', min: 3, max: 4, grid: 140, desc: "Rilevamento attivo. I sistemi di difesa IA sono allertati." },
+            { id: 3, name: "Firewall Alpha", color: '#39ff14', bg: 'rgba(57, 255, 20, 0.05)', min: 5, max: 7, grid: 160, desc: "Barriera di sicurezza critica. Precisione chirurgica richiesta." },
+            { id: 4, name: "Il Nucleo", color: '#ff003c', bg: 'rgba(255, 0, 60, 0.05)', min: 8, max: 99, grid: 180, desc: "Accesso al centro nevralgico. Sopravvivenza improbabile." }
+        ];
+
+        // Definizione dei trofei (precedentemente mancante)
+        const TROPHIES = [
+            { id: 'win', name: 'Hacker', desc: 'Prima vittoria', icon: '💾' },
+            { id: 'ch1', name: 'Infiltrato', desc: 'Cap. 1 Completo', icon: '🔓' },
+            { id: 'turbo', name: 'Hyper', desc: 'Turbo per 4s', icon: '🚀' },
+            { id: 'ghost', name: 'Fantasma', desc: 'Vittoria pacifica', icon: '👻' },
+            { id: 'hard', name: 'Elite', desc: 'Vittoria Hard', icon: '💎' }
+        ];
+
+        const Storage = {
+            getLvl: () => parseInt(localStorage.getItem('tr_lvl')) || 1,
+            setLvl: (v) => localStorage.setItem('tr_lvl', v),
+            getTr: () => JSON.parse(localStorage.getItem('tr_troph')) || [],
+            getSc: () => JSON.parse(localStorage.getItem('tr_scores')) || [],
+            saveSc: (score, mode) => {
+                let s = Storage.getSc();
+                s.push({ score, mode, date: new Date().toLocaleDateString() });
+                s.sort((a,b)=>b.score - a.score);
+                localStorage.setItem('tr_scores', JSON.stringify(s.slice(0, 5)));
+                renderLeaderboard();
+            }
+        };
+
+        // --- LOGICA DI GIOCO ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const tFill = document.getElementById('turbo-fill');
+
+        let config = { gridSize: 160, speed: 60, mode: 'quick', playerCol: '#00f2ff' };
+        let state = { active: false, cycles: [], grid: [], lastTick: 0, turbo: 100, isTurbo: false, kills: 0, lives: 3 };
+
+        class Cycle {
+            constructor(x, y, dx, dy, col, isP = false, aiLevel = 1) {
+                this.x = x; this.y = y; this.dx = dx; this.dy = dy;
+                this.col = col; this.isP = isP; this.aiLevel = aiLevel;
+                this.nodes = [{x, y}]; this.alive = true; this.next = { dx, dy };
+            }
+            update() {
+                if (!this.alive) return;
+                if (this.dx !== this.next.dx || this.dy !== this.next.dy) {
+                    this.nodes.push({x: this.x, y: this.y});
+                    this.dx = this.next.dx; this.dy = this.next.dy;
+                }
+                state.grid[this.x][this.y] = true;
+                this.x += this.dx; this.y += this.dy;
+                if (this.x < 0 || this.x >= config.gridSize || this.y < 0 || this.y >= config.gridSize || state.grid[this.x][this.y]) this.die();
+            }
+            setDir(nx, ny) { if ((nx !== 0 && this.dx === 0) || (ny !== 0 && this.dy === 0)) this.next = { dx: nx, dy: ny }; }
+            ai() {
+                if (!this.alive) return;
+                const tx = this.x + this.dx, ty = this.y + this.dy;
+                const turnProb = 0.01 + (this.aiLevel * 0.005);
+                if (tx < 0 || tx >= config.gridSize || ty < 0 || ty >= config.gridSize || state.grid[tx][ty] || Math.random() < turnProb) {
+                    const ops = [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}].filter(o => {
+                        const nx = this.x + o.dx, ny = this.y + o.dy;
+                        return nx>=0 && nx<config.gridSize && ny>=0 && ny<config.gridSize && !state.grid[nx][ny];
+                    });
+                    if (ops.length) { 
+                        if (this.aiLevel > 5) {
+                            ops.sort((a,b) => {
+                                let distA = 0, distB = 0;
+                                for(let i=1; i<10; i++) {
+                                    let na = {x: this.x + a.dx*i, y: this.y + a.dy*i};
+                                    if (na.x>=0 && na.x<config.gridSize && na.y>=0 && na.y<config.gridSize && !state.grid[na.x][na.y]) distA++;
+                                    let nb = {x: this.x + b.dx*i, y: this.y + b.dy*i};
+                                    if (nb.x>=0 && nb.x<config.gridSize && nb.y>=0 && nb.y<config.gridSize && !state.grid[nb.x][nb.y]) distB++;
+                                }
+                                return distB - distA;
+                            });
+                        }
+                        this.setDir(ops[0].dx, ops[0].dy); 
+                    }
+                }
+            }
+            die() { this.alive = false; this.nodes.push({x: this.x, y: this.y}); }
+            draw() {
+                const u = canvas.width / config.gridSize;
+                ctx.globalAlpha = 0.35; ctx.lineWidth = u * (this.isP && state.isTurbo ? 3.5 : 2.5);
+                this.drawPath(u);
+                ctx.globalAlpha = 1.0; ctx.lineWidth = u * (this.isP && state.isTurbo ? 1.5 : 1.0);
+                this.drawPath(u);
+            }
+            drawPath(u) {
+                ctx.beginPath(); ctx.strokeStyle = this.col; ctx.lineCap = "round"; ctx.lineJoin = "round";
+                ctx.moveTo(this.nodes[0].x * u + u/2, this.nodes[0].y * u + u/2);
+                for(let i=1; i < this.nodes.length; i++) ctx.lineTo(this.nodes[i].x * u + u/2, this.nodes[i].y * u + u/2);
+                if (this.alive) ctx.lineTo(this.x * u + u/2, this.y * u + u/2);
+                ctx.stroke();
+            }
+        }
+
+        const resize = () => { canvas.width = canvas.height = Math.min(window.innerWidth, window.innerHeight * 0.75, 600); };
+
+        window.initProcess = (m, resetLives = true) => {
+            config.mode = m; 
+            if (resetLives) state.lives = 3;
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('game-over').classList.add('hidden');
+            document.getElementById('pre-game').classList.remove('hidden');
+            const l = Storage.getLvl(); 
+            const ch = CHAPTERS.find(c => l >= c.min && l <= c.max) || CHAPTERS[3];
+            document.getElementById('lvl-status').innerText = m === 'campaign' ? `NODO ${l}: ${ch.name}` : "GARA RAPIDA";
+            document.documentElement.style.setProperty('--current-accent', ch.color);
+            
+            let c = 3; document.getElementById('timer-txt').innerText = c;
+            const t = setInterval(() => {
+                c--; if(c<=0) { clearInterval(t); document.getElementById('pre-game').classList.add('hidden'); startGame(); }
+                else document.getElementById('timer-txt').innerText = c;
+            }, 750);
+        };
+
+        const updateHUD = () => {
+            const lCont = document.getElementById('lives-display');
+            lCont.innerHTML = '';
+            if (config.mode === 'campaign') {
+                for(let i=0; i<3; i++) {
+                    const h = document.createElement('span');
+                    h.className = `heart ${i >= state.lives ? 'lost' : ''}`;
+                    h.innerHTML = '❤';
+                    lCont.appendChild(h);
+                }
+            }
+            document.getElementById('hud-kills').innerText = state.kills < 10 ? '0'+state.kills : state.kills;
+        };
+
+        const startGame = () => {
+            resize(); state.active = true; state.kills = 0; state.turbo = 100; state.lastTick = performance.now();
+            const l = Storage.getLvl(); 
+            const ch = config.mode === 'campaign' ? (CHAPTERS.find(c => l >= c.min && l <= c.max) || CHAPTERS[3]) : CHAPTERS[0];
+            config.gridSize = ch.grid;
+            state.grid = Array(config.gridSize).fill().map(() => Array(config.gridSize).fill(false));
+            
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('turbo-indicator').classList.remove('hidden');
+            updateHUD();
+
+            let nIA = 3, pCol = config.playerCol;
+            if (config.mode === 'campaign') {
+                nIA = Math.min(6, 1 + Math.floor(l/1.5));
+                config.speed = Math.max(30, 80 - l * 5);
+                pCol = ch.color;
+                document.getElementById('hud-cap').innerText = `CHAPTER ${ch.id}`;
+            }
+
+            state.cycles = [ new Cycle(20, Math.floor(config.gridSize/2), 1, 0, pCol, true) ];
+            const pool = ['#00f2ff', '#ff00ff', '#39ff14', '#fefe00', '#ff003c'].filter(c => c.toLowerCase() !== pCol.toLowerCase());
+            for(let i=0; i<nIA; i++) {
+                state.cycles.push(new Cycle(config.gridSize - 20, Math.floor(20 + i*(config.gridSize/nIA)), -1, 0, pool[i % pool.length], false, l));
+            }
+
+            AudioSystem.playBeat(config.mode === 'campaign' ? 35 + l : 41.2); 
+            requestAnimationFrame(loop);
+        };
+
+        const loop = (now) => {
+            if (!state.active) return;
+            if (state.isTurbo && state.turbo > 0) state.turbo -= 2.5; 
+            else { state.isTurbo = false; if (state.turbo < 100) state.turbo += 0.5; }
+            if (tFill) tFill.style.width = state.turbo + "%";
+
+            const spd = state.isTurbo ? config.speed / 2.8 : config.speed;
+            if (now - state.lastTick >= spd) {
+                state.lastTick = now;
+                const aliveB = state.cycles.filter(c => c.alive && !c.isP).length;
+                state.cycles.forEach(c => { if(c.alive) { if(!c.isP) c.ai(); c.update(); } });
+                const aliveA = state.cycles.filter(c => c.alive && !c.isP).length;
+                if (aliveB > aliveA) state.kills += (aliveB-aliveA);
+                
+                const l = Storage.getLvl();
+                const ch = config.mode === 'campaign' ? (CHAPTERS.find(c => l >= c.min && l <= c.max) || CHAPTERS[3]) : CHAPTERS[0];
+                ctx.fillStyle = 'black'; ctx.fillRect(0,0,canvas.width,canvas.height);
+                
+                ctx.strokeStyle = ch.color; ctx.globalAlpha = 0.1; ctx.lineWidth = 1;
+                const step = canvas.width / 10;
+                for(let i=0; i<=canvas.width; i+=step) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
+                ctx.globalAlpha = 1.0;
+
+                state.cycles.forEach(c => c.draw());
+                updateHUD();
+
+                if (!state.cycles[0].alive) finish(false); else if (aliveA === 0) finish(true);
+            }
+            requestAnimationFrame(loop);
+        };
+
+        const finish = (win) => {
+            state.active = false; AudioSystem.stop();
+            const ov = document.getElementById('game-over');
+            ov.classList.remove('hidden');
+            const status = document.getElementById('end-status-txt');
+            const score = document.getElementById('end-score-txt');
+            const retry = document.getElementById('retry-btn');
+
+            if (win) {
+                status.innerText = "ACCESSO ESEGUITO";
+                status.style.color = "var(--cyber-blue)";
+                score.innerText = `${state.kills} NODI RESETTATI`;
+                retry.innerText = "LIVELLO SUCCESSIVO";
+                retry.onclick = () => { Storage.setLvl(Storage.getLvl()+1); initProcess(config.mode, false); };
+                Storage.saveSc(state.kills, config.mode === 'campaign' ? 'CAMP' : 'RAP');
+            } else {
+                if (config.mode === 'campaign') {
+                    state.lives--;
+                    if (state.lives > 0) {
+                        status.innerText = "SISTEMA DANNEGGIATO";
+                        score.innerText = `VITE RIMANENTI: ${state.lives}`;
+                        retry.innerText = "RIPROVA NODO";
+                        retry.onclick = () => { initProcess(config.mode, false); };
+                    } else {
+                        status.innerText = "CONNESSIONE PERDUTA";
+                        score.innerText = "TUTTI I CORE SONO OFFLINE";
+                        retry.innerText = "RICOMINCIA CAMPAGNA";
+                        retry.onclick = () => { Storage.setLvl(1); initProcess(config.mode, true); };
+                    }
+                } else {
+                    status.innerText = "DE-RESIDUATO";
+                    score.innerText = `${state.kills} NODI PRIMA DEL CRASH`;
+                    retry.innerText = "RIPROVA GARA";
+                    retry.onclick = () => { initProcess(config.mode, true); };
+                }
+            }
+        };
+
+        window.backToMenu = () => {
+            state.active = false; AudioSystem.stop();
+            document.getElementById('game-over').classList.add('hidden');
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('turbo-indicator').classList.add('hidden');
+            document.getElementById('menu').classList.remove('hidden');
+            switchTab('quick');
+        };
+
+        window.switchTab = (t) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            const btn = document.querySelector(`[onclick="switchTab('${t}')"]`);
+            if (btn) btn.classList.add('active');
+            const content = document.getElementById(`tab-${t}`);
+            if (content) content.classList.add('active');
+            if (t === 'campaign') {
+                const l = Storage.getLvl(); const ch = CHAPTERS.find(x => l >= x.min && l <= x.max) || CHAPTERS[3];
+                document.getElementById('camp-lvl-info').innerText = `LIVELLO ATTUALE: ${l}`;
+                document.getElementById('camp-chap-title').innerText = `CAPITOLO ${ch.id}: ${ch.name}`;
+                document.getElementById('camp-chap-title').style.color = ch.color;
+                document.getElementById('camp-description').innerText = ch.desc;
+            }
+        };
+
+        const renderTrophies = () => {
+            const u = Storage.getTr();
+            const list = document.getElementById('trophy-list');
+            if (list) list.innerHTML = TROPHIES.map(t => `<div class="trophy-box ${u.includes(t.id) ? 'unlocked' : ''}"><div style="font-size:1.6rem">${t.icon}</div><div style="font-weight:900; font-size:0.5rem; margin-top:8px;">${t.name}</div><div style="font-size:0.4rem; color:#666; text-align:center;">${t.desc}</div></div>`).join('');
+        };
+
+        const renderLeaderboard = () => {
+            const scores = Storage.getSc();
+            const tbody = document.getElementById('leaderboard-tbody');
+            if (!tbody) return;
+            if (scores.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#555;">Nessun dato</td></tr>'; return; }
+            tbody.innerHTML = scores.map((s, i) => `<tr class="${i === 0 ? 'rank-gold' : ''}"><td>${i+1}</td><td>${s.date}</td><td style="font-weight:bold">${s.score}</td><td style="font-size:0.5rem; opacity:0.7">${s.mode}</td></tr>`).join('');
+        };
+
+        document.querySelectorAll('.color-opt').forEach(o => o.onclick = () => {
+            document.querySelectorAll('.color-opt').forEach(x => x.classList.remove('active'));
+            o.classList.add('active'); config.playerCol = o.dataset.color;
+        });
+
+        document.querySelectorAll('#diff-selector .btn-opt').forEach(b => b.onclick = () => {
+            document.querySelectorAll('#diff-selector .btn-opt').forEach(x => x.classList.remove('active'));
+            b.classList.add('active'); config.difficulty = parseInt(b.dataset.d);
+        });
+
+        window.addEventListener('keydown', e => {
+            if (!state.active || !state.cycles[0]) return;
+            const p = state.cycles[0]; const k = e.key.toLowerCase();
+            if (['w', 'arrowup'].includes(k)) { p.setDir(0, -1); e.preventDefault(); }
+            if (['s', 'arrowdown'].includes(k)) { p.setDir(0, 1); e.preventDefault(); }
+            if (['a', 'arrowleft'].includes(k)) { p.setDir(-1, 0); e.preventDefault(); }
+            if (['d', 'arrowright'].includes(k)) { p.setDir(1, 0); e.preventDefault(); }
+            if (e.key === ' ' || e.key === 'Shift') state.isTurbo = true;
+        });
+        window.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Shift') state.isTurbo = false; });
+        
+        let ts = null;
+        canvas.addEventListener('touchstart', e => { ts = { x: e.touches[0].clientX, y: e.touches[0].clientY }; if(state.active) state.isTurbo = true; });
+        canvas.addEventListener('touchend', () => { state.isTurbo = false; });
+        canvas.addEventListener('touchmove', e => {
+            if (!ts || !state.active || !state.cycles[0]) return; e.preventDefault();
+            const dx = e.touches[0].clientX - ts.x, dy = e.touches[0].clientY - ts.y;
+            if (Math.abs(dx) > 18 || Math.abs(dy) > 18) {
+                if (Math.abs(dx) > Math.abs(dy)) state.cycles[0].setDir(dx > 0 ? 1 : -1, 0);
+                else state.cycles[0].setDir(0, dy > 0 ? 1 : -1);
+                ts = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+        }, {passive:false});
+
+        renderTrophies(); renderLeaderboard(); resize(); window.onresize = resize;
+    </script>
+</body>
+</html>
