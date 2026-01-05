@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#020205">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Tronify: Cyber Neon Arena</title>
+    
+    <!-- Link al Manifest Dinamico generato via JS -->
+    <link id="manifest-link" rel="manifest">
+
+    <style>
+        :root {
+            --bg-dark: #020205;
+            --cyber-blue: #00f2ff;
+            --cyber-pink: #ff00ff;
+            --cyber-yellow: #fefe00;
+            --cyber-green: #39ff14;
+            --cyber-red: #ff003c;
+            --panel-bg: rgba(5, 5, 15, 0.92);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* Effetto Scanline Retro CRT */
+        #crt-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        #game-container {
+            position: relative;
+            width: 95vmin;
+            height: 95vmin;
+            max-width: 750px;
+            max-height: 750px;
+            background: #000;
+            border: 2px solid var(--cyber-blue);
+            box-shadow: 0 0 50px rgba(0, 242, 255, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--panel-bg);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            text-align: center;
+            backdrop-filter: blur(12px);
+            transition: opacity 0.4s ease;
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 12vw, 4.5rem);
+            margin-bottom: 0.8rem;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            text-shadow: 4px 4px var(--cyber-pink), -2px -2px var(--cyber-blue);
+            font-weight: 900;
+        }
+
+        .section { margin-bottom: 15px; width: 100%; max-width: 320px; }
+        .label { 
+            display: block; 
+            font-size: 0.65rem; 
+            color: var(--cyber-blue); 
+            text-transform: uppercase; 
+            margin-bottom: 8px; 
+            letter-spacing: 2px; 
+            font-weight: bold;
+        }
+
+        .color-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .color-box {
+            width: 32px; height: 32px; border-radius: 6px; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.1); transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .color-box.active { 
+            border-color: #fff; 
+            transform: scale(1.15); 
+            box-shadow: 0 0 15px currentColor;
+        }
+
+        .option-row { display: flex; gap: 6px; justify-content: center; }
+        .btn-opt {
+            flex: 1; padding: 8px; 
+            background: rgba(0, 242, 255, 0.05); 
+            border: 1px solid var(--cyber-blue);
+            color: var(--cyber-blue); 
+            cursor: pointer; 
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .btn-opt.active { background: var(--cyber-blue); color: #000; font-weight: 800; }
+
+        .btn-start {
+            margin-top: 15px; padding: 14px 45px; font-size: 1.1rem;
+            background: transparent; color: #fff; border: 2px solid #fff;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 5px;
+            transition: all 0.3s ease; font-weight: bold;
+            border-radius: 4px;
+        }
+        .btn-start:hover { background: #fff; color: #000; box-shadow: 0 0 35px #fff; }
+
+        input#nick-input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--cyber-blue);
+            color: #fff;
+            padding: 12px;
+            text-align: center;
+            font-family: inherit;
+            margin-bottom: 5px;
+            width: 100%;
+            text-transform: uppercase;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        #hud {
+            position: absolute; top: 15px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between;
+            font-size: 0.75rem; color: var(--cyber-blue);
+            pointer-events: none; z-index: 50;
+            text-shadow: 0 0 10px #000;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        #turbo-container {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 180px; height: 4px; background: rgba(255,255,255,0.1);
+            pointer-events: none; z-index: 50;
+            border-radius: 4px;
+        }
+        #turbo-bar { width: 100%; height: 100%; background: var(--cyber-pink); box-shadow: 0 0 15px var(--cyber-pink); border-radius: 4px; transition: width 0.1s linear; }
+
+        #leaderboard {
+            width: 100%;
+            max-width: 320px;
+            margin-top: 15px;
+            font-size: 0.7rem;
+            border-top: 1px solid rgba(0, 242, 255, 0.2);
+            padding-top: 10px;
+        }
+        .leader-item { 
+            display: flex; justify-content: space-between; padding: 5px 0; 
+            border-bottom: 1px solid rgba(255,255,255,0.05); 
+        }
+
+        .hidden { display: none !important; }
+        .blink { animation: blinker 1.2s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
+        #pwa-install-btn {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(0, 242, 255, 0.1);
+            border: 1px solid var(--cyber-blue);
+            color: var(--cyber-blue);
+            font-size: 0.55rem;
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            z-index: 1001;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="crt-overlay"></div>
+    <button id="pwa-install-btn" class="hidden">INSTALLA APP</button>
+
+    <div id="game-container">
+        <!-- HUD Partita -->
+        <div id="hud">
+            <div>FRAGS: <span id="kill-count">00</span></div>
+            <div id="new-record-txt" class="blink hidden" style="color:var(--cyber-yellow)">NUOVO RECORD!</div>
+            <div>IA: <span id="ai-count">03</span></div>
+        </div>
+
+        <!-- Barra del Turbo -->
+        <div id="turbo-container"><div id="turbo-bar"></div></div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Menu Principale -->
+        <div id="menu" class="overlay">
+            <h1>TRONIFY</h1>
+            
+            <div class="section">
+                <input type="text" id="nick-input" placeholder="NICKNAME" maxlength="12">
+                <div id="auth-info" style="font-size: 0.55rem; color: var(--cyber-green); margin-top: 5px; text-transform: uppercase;">Connessione neurale...</div>
+            </div>
+
+            <div class="section">
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <span class="label">Difficoltà</span>
+                        <div class="option-row" id="diff-row">
+                            <button class="btn-opt" data-d="0">Min</button>
+                            <button class="btn-opt active" data-d="1">Mid</button>
+                            <button class="btn-opt" data-d="2">Elite</button>
+                        </div>
+                    </div>
+                    <div style="flex: 1;">
+                        <span class="label">Audio</span>
+                        <div class="option-row">
+                            <button class="btn-opt active" id="btn-audio-toggle">ON</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <span class="label">Colore Nucleo</span>
+                <div class="color-grid" id="color-picker"></div>
+            </div>
+
+            <button class="btn-start" id="btn-start">CARICA GRIGLIA</button>
+
+            <div id="leaderboard">
+                <span class="label">Top Piloti Globali</span>
+                <div id="leader-list">
+                    <div style="font-size: 0.6rem; color: #444;">Accesso ai dati...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fine Partita -->
+        <div id="end-screen" class="overlay hidden">
+            <h1 id="end-title" style="font-size: 2.2rem;">SISTEMA OFFLINE</h1>
+            <p id="end-msg" style="color: #888; margin-bottom: 15px; font-size: 0.85rem;"></p>
+            <p id="end-stats" style="color: var(--cyber-blue); font-weight: bold; margin-bottom: 25px; font-size: 1.5rem; letter-spacing: 2px;"></p>
+            <div id="sync-status" style="font-size: 0.65rem; margin-bottom: 20px; letter-spacing: 1px;"></div>
+            <button class="btn-start" onclick="location.reload()">RESET</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CYBER AUDIO ENGINE (Procedurale) ---
+        class CyberAudio {
+            constructor() {
+                this.ctx = null;
+                this.playing = false;
+                this.enabled = true;
+                this.tempo = 120;
+                this.nextNoteTime = 0;
+                this.currentStep = 0;
+            }
+
+            init() {
+                if (this.ctx) return;
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            start() {
+                if (!this.enabled || this.playing) return;
+                this.init();
+                this.playing = true;
+                this.nextNoteTime = this.ctx.currentTime;
+                this.scheduler();
+            }
+
+            stop() {
+                this.playing = false;
+            }
+
+            scheduler() {
+                if (!this.playing) return;
+                while (this.nextNoteTime < this.ctx.currentTime + 0.1) {
+                    this.playPatternStep(this.currentStep, this.nextNoteTime);
+                    this.nextNoteTime += 60.0 / (this.tempo * 2); // 8th notes
+                    this.currentStep = (this.currentStep + 1) % 16;
+                }
+                setTimeout(() => this.scheduler(), 25);
+            }
+
+            playPatternStep(step, time) {
+                // Bass Pulsing (C1, Eb1, F1, Bb0)
+                const bassScale = [32.70, 38.89, 43.65, 29.14];
+                const note = bassScale[Math.floor(step / 4)];
+                this.osc(note, time, 0.2, 'sawtooth', 0.15);
+
+                // Percussion - Kick (Steps 0, 4, 8, 12)
+                if (step % 4 === 0) {
+                    this.osc(150, time, 0.1, 'sine', 0.4, true);
+                }
+
+                // Lead Arpeggio (Steps 2, 6, 10, 14)
+                if (step % 2 === 0) {
+                    const leadScale = [130.81, 155.56, 174.61, 233.08];
+                    const lNote = leadScale[(step + 2) % 4];
+                    this.osc(lNote * 2, time, 0.1, 'square', 0.05);
+                }
+            }
+
+            osc(freq, time, dur, type, vol, sweep = false) {
+                const o = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                o.type = type;
+                o.frequency.setValueAtTime(freq, time);
+                if (sweep) o.frequency.exponentialRampToValueAtTime(0.01, time + dur);
+                
+                g.gain.setValueAtTime(vol, time);
+                g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+                
+                o.connect(g);
+                g.connect(this.ctx.destination);
+                o.start(time);
+                o.stop(time + dur);
+            }
+        }
+        const audio = new CyberAudio();
+
+        // --- PWA SETUP ---
+        const setupPWA = () => {
+            try {
+                const manifest = {
+                    "name": "Tronify: Cyber Neon Arena",
+                    "short_name": "Tronify",
+                    "start_url": window.location.href,
+                    "display": "standalone",
+                    "background_color": "#020205",
+                    "theme_color": "#00f2ff",
+                    "icons": [{
+                        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzAyMDIwNSIvPjxjaXJjbGUgY3g9IjI1NiIgY3k9IjI1NiIgcj0iMTYwIiBmaWxsPSJub25lIiBzdHJva2U9IiMwMGYyZmYiIHN0cm9rZS13aWR0aD0iMjQiLz48cGF0aCBkPSJNMjU2IDk2djMyME05NiAyNTZoMzIwIiBzdHJva2U9IiNmZjAwZmYiIHN0cm9rZS13aWR0aD0iMTYiLz48L3N2Zz4=",
+                        "sizes": "512x512",
+                        "type": "image/svg+xml",
+                        "purpose": "any maskable"
+                    }]
+                };
+                const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+                document.getElementById('manifest-link').setAttribute('href', URL.createObjectURL(manifestBlob));
+
+                if ('serviceWorker' in navigator) {
+                    const swCode = `
+                        const CACHE_NAME = 'tronify-v3';
+                        self.addEventListener('install', (e) => e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll([location.href]))));
+                        self.addEventListener('fetch', (e) => e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request))));
+                    `;
+                    const swBlob = new Blob([swCode], {type: 'text/javascript'});
+                    navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+                }
+            } catch (e) {}
+        };
+        setupPWA();
+
+        // --- FIREBASE & GIOCO ---
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'tronify-v3-final-audio';
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
+        const endScreen = document.getElementById('end-screen');
+        const colorPicker = document.getElementById('color-picker');
+        const leaderList = document.getElementById('leader-list');
+        const turboBar = document.getElementById('turbo-bar');
+
+        const NEON_PALETTE = ['#00f2ff', '#ff00ff', '#39ff14', '#fefe00', '#9d00ff', '#ff003c'];
+        let config = { gridSize: 160, playerColor: NEON_PALETTE[0], difficulty: 1, speed: 60, cellSize: 0 };
+        let state = { active: false, cycles: [], lastTick: 0, turboCharge: 100, isTurbo: false, kills: 0, best: 0 };
+        let currentUser = null;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('auth-info').innerText = "LINK NEURALE: " + user.uid.substring(0, 10).toUpperCase();
+                fetchProfile();
+                syncLeaderboard();
+            }
+        });
+
+        const fetchProfile = async () => {
+            if (!currentUser) return;
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'stats'));
+            if (snap.exists()) {
+                const d = snap.data();
+                if (d.nick) document.getElementById('nick-input').value = d.nick;
+                state.best = d.best || 0;
+            }
+        };
+
+        const syncLeaderboard = () => {
+            if (!currentUser) return;
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'scores'), (snap) => {
+                const list = [];
+                snap.forEach(d => list.push(d.data()));
+                list.sort((a, b) => b.score - a.score);
+                leaderList.innerHTML = list.slice(0, 5).map((s, i) => `
+                    <div class="leader-item">
+                        <span style="color:var(--cyber-blue)">${i+1}. ${s.name || 'ANON'}</span>
+                        <span style="color:var(--cyber-pink)">${s.score} FRAGS</span>
+                    </div>
+                `).join('') || '<div style="font-size: 0.6rem; color: #555;">Sincronizzazione...</div>';
+            });
+        };
+
+        const uploadScore = async () => {
+            if (!currentUser) return;
+            const nick = document.getElementById('nick-input').value.trim() || "USER_" + currentUser.uid.substring(0, 4);
+            const status = document.getElementById('sync-status');
+            status.innerText = "TRASMISSIONE DATI...";
+            try {
+                const pRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'stats');
+                state.best = Math.max(state.best, state.kills);
+                await setDoc(pRef, { nick, best: state.best }, { merge: true });
+
+                const pubRef = doc(db, 'artifacts', appId, 'public', 'data', 'scores', currentUser.uid);
+                const pubSnap = await getDoc(pubRef);
+                if (!pubSnap.exists() || state.kills > (pubSnap.data().score || 0)) {
+                    await setDoc(pubRef, { name: nick, score: state.kills, ts: Date.now() });
+                }
+                status.innerText = "DATI SINCRONIZZATI";
+                status.style.color = "var(--cyber-green)";
+            } catch (e) {
+                status.innerText = "OFFLINE - DATI LOCALI";
+            }
+        };
+
+        class Cycle {
+            constructor(id, x, y, dx, dy, color, isPlayer = false) {
+                this.id = id; this.x = x; this.y = y; this.dx = dx; this.dy = dy;
+                this.color = color; this.isPlayer = isPlayer;
+                this.trail = []; this.alive = true; this.nextDir = { dx, dy };
+            }
+            update() {
+                if (!this.alive) return;
+                this.trail.push({ x: this.x, y: this.y });
+                this.dx = this.nextDir.dx; this.dy = this.nextDir.dy;
+                this.x += this.dx; this.y += this.dy;
+                if (this.x < 0 || this.x >= config.gridSize || this.y < 0 || this.y >= config.gridSize) this.die();
+            }
+            setDirection(nx, ny) {
+                if (nx !== 0 && this.dx !== 0) return;
+                if (ny !== 0 && this.dy !== 0) return;
+                this.nextDir = { dx: nx, dy: ny };
+            }
+            ai() {
+                if (!this.alive) return;
+                const d = config.difficulty === 0 ? 6 : (config.difficulty === 1 ? 16 : 32);
+                let danger = false;
+                for(let i=1; i<=d; i++) if (this.isWall(this.x + this.dx*i, this.y + this.dy*i)) { danger = true; break; }
+                if (danger || Math.random() < 0.02) {
+                    const opts = [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}].filter(o => {
+                        if (o.dx === -this.dx && o.dy === -this.dy) return false;
+                        return !this.isWall(this.x + o.dx, this.y + o.dy);
+                    });
+                    if (opts.length > 0) {
+                        if (config.difficulty >= 1) opts.sort((a, b) => this.eval(b) - this.eval(a));
+                        this.setDirection(opts[0].dx, opts[0].dy);
+                    }
+                }
+            }
+            isWall(tx, ty) {
+                if (tx < 0 || tx >= config.gridSize || ty < 0 || ty >= config.gridSize) return true;
+                for(const c of state.cycles) {
+                    if (!c.alive && c.trail.length === 0) continue;
+                    for(const p of c.trail) if (p.x === tx && p.y === ty) return true;
+                    if (c.alive && c.x === tx && c.y === ty) return true;
+                }
+                return false;
+            }
+            eval(dir) {
+                let s = 0, tx = this.x + dir.dx, ty = this.y + dir.dy;
+                for(let i=0; i<45; i++) { if (this.isWall(tx, ty)) break; s++; tx += dir.dx; ty += dir.dy; }
+                return s;
+            }
+            die() {
+                this.alive = false;
+                if (!this.isPlayer) {
+                    let f = setInterval(() => { if(this.trail.length > 0) this.trail.shift(); else clearInterval(f); }, 30);
+                }
+            }
+            draw() {
+                if (this.trail.length === 0 && !this.alive) return;
+                const activeTurbo = this.isPlayer && state.isTurbo;
+                ctx.lineWidth = config.cellSize * (activeTurbo ? 2.0 : 1.2);
+                ctx.strokeStyle = this.color;
+                ctx.shadowBlur = activeTurbo ? 25 : 12; ctx.shadowColor = this.color;
+                if (this.trail.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.trail[0].x * config.cellSize + config.cellSize/2, this.trail[0].y * config.cellSize + config.cellSize/2);
+                    for(const p of this.trail) ctx.lineTo(p.x * config.cellSize + config.cellSize/2, p.y * config.cellSize + config.cellSize/2);
+                    if (this.alive) ctx.lineTo(this.x * config.cellSize + config.cellSize/2, this.y * config.cellSize + config.cellSize/2);
+                    ctx.stroke();
+                }
+                if (this.alive) {
+                    ctx.fillStyle = "#fff"; ctx.shadowBlur = 20;
+                    ctx.fillRect(this.x * config.cellSize, this.y * config.cellSize, config.cellSize, config.cellSize);
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        const resize = () => {
+            const dim = Math.min(window.innerWidth * 0.95, window.innerHeight * 0.88, 750);
+            canvas.width = dim; canvas.height = dim;
+            config.cellSize = dim / config.gridSize;
+        };
+
+        const startGame = () => {
+            resize();
+            audio.start(); // Avvia musica
+            state.active = true; state.kills = 0; state.turboCharge = 100; state.lastTick = performance.now();
+            document.getElementById('new-record-txt').classList.add('hidden');
+            const mid = Math.floor(config.gridSize / 2);
+            const others = NEON_PALETTE.filter(c => c !== config.playerColor).sort(() => Math.random() - 0.5);
+            state.cycles = [
+                new Cycle(0, 30, mid, 1, 0, config.playerColor, true),
+                new Cycle(1, config.gridSize - 31, mid, -1, 0, others[0]),
+                new Cycle(2, mid, 30, 0, 1, others[1]),
+                new Cycle(3, mid, config.gridSize - 31, 0, -1, others[2])
+            ];
+            menu.classList.add('hidden');
+            endScreen.classList.add('hidden');
+            loop(performance.now());
+        };
+
+        const loop = (now) => {
+            if (!state.active) return;
+            requestAnimationFrame(loop);
+
+            if (state.isTurbo && state.turboCharge > 0) {
+                state.turboCharge -= 2.6;
+                audio.tempo = 160; // Accelera musica con turbo
+            } else {
+                state.isTurbo = false;
+                audio.tempo = 120;
+                if (state.turboCharge < 100) state.turboCharge += 0.45;
+            }
+            turboBar.style.width = state.turboCharge + "%";
+
+            const spdTick = state.isTurbo ? config.speed / 2.8 : config.speed;
+            if (now - state.lastTick < spdTick) return;
+            state.lastTick = now;
+
+            state.cycles.forEach(c => { if(c.alive && !c.isPlayer) c.ai(); c.update(); });
+
+            for(const c of state.cycles) {
+                if (!c.alive) continue;
+                for(const other of state.cycles) {
+                    if (!other.alive && other.trail.length === 0) continue;
+                    for(let i=0; i < (other.id === c.id ? other.trail.length - 1 : other.trail.length); i++) {
+                        const p = other.trail[i];
+                        if (c.x === p.x && c.y === p.y) {
+                            c.die();
+                            if (other.isPlayer && !c.isPlayer) {
+                                state.kills++;
+                                if (state.kills > state.best && state.best > 0) document.getElementById('new-record-txt').classList.remove('hidden');
+                            }
+                            break;
+                        }
+                    }
+                    if (!c.alive) break;
+                    if (other.id !== c.id && other.alive && c.x === other.x && c.y === other.y) { c.die(); other.die(); }
+                }
+            }
+
+            ctx.fillStyle = 'rgba(1, 1, 5, 0.45)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            state.cycles.forEach(c => c.draw());
+
+            document.getElementById('kill-count').innerText = state.kills.toString().padStart(2, '0');
+            const aliveHosts = state.cycles.filter(c => c.alive && !c.isPlayer).length;
+            document.getElementById('ai-count').innerText = aliveHosts.toString().padStart(2, '0');
+
+            if (!state.cycles[0].alive) finish("SISTEMA OFFLINE", "Connessione neurale troncata.");
+            else if (aliveHosts === 0) finish("CONTROLLO TOTALE", "Tutte le IA eliminate.");
+        };
+
+        const finish = (title, msg) => {
+            state.active = false;
+            audio.stop();
+            document.getElementById('end-title').innerText = title;
+            document.getElementById('end-msg').innerText = msg;
+            document.getElementById('end-stats').innerText = `${state.kills} FRAGS`;
+            endScreen.classList.remove('hidden');
+            uploadScore();
+        };
+
+        // --- INPUTS & UI ---
+        document.getElementById('btn-audio-toggle').onclick = (e) => {
+            audio.enabled = !audio.enabled;
+            e.target.innerText = audio.enabled ? "ON" : "OFF";
+            e.target.classList.toggle('active');
+        };
+
+        NEON_PALETTE.forEach((color, i) => {
+            const b = document.createElement('div');
+            b.className = 'color-box' + (i === 0 ? ' active' : '');
+            b.style.backgroundColor = color;
+            b.style.color = color;
+            b.onclick = () => {
+                document.querySelectorAll('.color-box').forEach(el => el.classList.remove('active'));
+                b.classList.add('active');
+                config.playerColor = color;
+            };
+            colorPicker.appendChild(b);
+        });
+
+        document.querySelectorAll('#diff-row .btn-opt').forEach(b => {
+            b.onclick = () => {
+                document.querySelectorAll('#diff-row .btn-opt').forEach(el => el.classList.remove('active'));
+                b.classList.add('active');
+                config.difficulty = parseInt(b.dataset.d);
+            };
+        });
+
+        window.addEventListener('keydown', e => {
+            if(!state.active) return; const p = state.cycles[0]; const k = e.key.toLowerCase();
+            if (k === 'arrowup' || k === 'w') p.setDirection(0, -1);
+            if (k === 'arrowdown' || k === 's') p.setDirection(0, 1);
+            if (k === 'arrowleft' || k === 'a') p.setDirection(-1, 0);
+            if (k === 'arrowright' || k === 'd') p.setDirection(1, 0);
+            if (e.key === ' ' || e.key === 'Shift') state.isTurbo = true;
+        });
+        window.addEventListener('keyup', e => { if(e.key === ' ' || e.key === 'Shift') state.isTurbo = false; });
+
+        let touchS = null;
+        canvas.addEventListener('touchstart', e => { 
+            touchS = { x: e.touches[0].clientX, y: e.touches[0].clientY }; 
+            if(state.active) state.isTurbo = true;
+        });
+        canvas.addEventListener('touchend', () => { state.isTurbo = false; });
+        canvas.addEventListener('touchmove', e => {
+            if (!touchS || !state.active) return; e.preventDefault();
+            const dx = e.touches[0].clientX - touchS.x, dy = e.touches[0].clientY - touchS.y;
+            if (Math.abs(dx) > 18 || Math.abs(dy) > 18) {
+                const p = state.cycles[0];
+                if (Math.abs(dx) > Math.abs(dy)) p.setDirection(dx > 0 ? 1 : -1, 0);
+                else p.setDirection(0, dy > 0 ? 1 : -1);
+                touchS = null;
+            }
+        }, {passive: false});
+
+        document.getElementById('btn-start').onclick = startGame;
+        window.onresize = resize;
+        (async () => { if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token); else await signInAnonymously(auth); })();
+        resize();
+    </script>
+</body>
+</html>
