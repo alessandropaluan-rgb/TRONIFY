@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tronify: Cyber Neon Arena</title>
+    <style>
+        :root {
+            --bg-dark: #020205;
+            --cyber-blue: #00f2ff;
+            --cyber-pink: #ff00ff;
+            --cyber-yellow: #fefe00;
+            --cyber-green: #39ff14;
+            --cyber-purple: #9d00ff;
+            --cyber-red: #ff003c;
+            --panel-bg: rgba(5, 5, 15, 0.95);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* Effetto Scanline CRT */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        #game-container {
+            position: relative;
+            width: 95vmin;
+            height: 95vmin;
+            max-width: 800px;
+            max-height: 800px;
+            background: #000;
+            border: 1px solid var(--cyber-blue);
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.2), inset 0 0 30px rgba(0, 242, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--panel-bg);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(15px);
+        }
+
+        h1 {
+            font-size: clamp(2rem, 12vw, 5rem);
+            margin-bottom: 1rem;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            text-shadow: 2px 2px var(--cyber-pink), -2px -2px var(--cyber-blue);
+            animation: glitch 1s infinite;
+        }
+
+        @keyframes glitch {
+            0% { transform: skew(0deg); }
+            20% { transform: skew(2deg); }
+            40% { transform: skew(-2deg); }
+            60% { transform: skew(1deg); }
+            100% { transform: skew(0deg); }
+        }
+
+        .section { margin-bottom: 25px; width: 100%; }
+        .label { 
+            display: block; 
+            font-size: 0.7rem; 
+            color: var(--cyber-blue); 
+            text-transform: uppercase; 
+            margin-bottom: 15px; 
+            letter-spacing: 4px; 
+        }
+
+        .color-grid { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .color-circle {
+            width: 35px; height: 35px; border-radius: 2px; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.1); transition: 0.3s;
+            position: relative;
+        }
+        .color-circle.active { 
+            border-color: #fff; 
+            transform: scale(1.2); 
+            box-shadow: 0 0 15px currentColor;
+        }
+
+        .diff-row { display: flex; gap: 10px; justify-content: center; }
+        .btn-diff {
+            padding: 10px 20px; 
+            background: rgba(0, 242, 255, 0.05); 
+            border: 1px solid var(--cyber-blue);
+            color: var(--cyber-blue); 
+            cursor: pointer; 
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: 0.3s;
+        }
+        .btn-diff.active { 
+            background: var(--cyber-blue); 
+            color: #000; 
+            box-shadow: 0 0 15px var(--cyber-blue);
+        }
+
+        .btn-main {
+            margin-top: 20px; padding: 18px 50px; font-size: 1.1rem;
+            background: transparent; color: #fff; border: 1px solid #fff;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 5px;
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-main:hover {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 0 30px #fff;
+        }
+
+        #hud {
+            position: absolute; top: 15px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between;
+            font-size: 0.65rem; color: var(--cyber-blue);
+            pointer-events: none; z-index: 50;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #turbo-bar {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 2px; background: rgba(255,255,255,0.05);
+            pointer-events: none; z-index: 50;
+        }
+        #turbo-fill { width: 100%; height: 100%; background: var(--cyber-pink); box-shadow: 0 0 10px var(--cyber-pink); }
+
+        .hidden { display: none !important; }
+
+        #resTitle { color: var(--cyber-red); text-shadow: 0 0 10px var(--cyber-red); }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="hud">
+            <span id="player-kills">FRAGS: 00</span>
+            <span id="ai-count">HOSTS: 03</span>
+        </div>
+
+        <div id="turbo-bar"><div id="turbo-fill"></div></div>
+
+        <canvas id="tronCanvas"></canvas>
+
+        <div id="menu" class="overlay">
+            <h1>TRONIFY</h1>
+            
+            <div class="section">
+                <span class="label">Scegli la tua frequenza</span>
+                <div class="color-grid" id="colorPicker"></div>
+            </div>
+
+            <div class="section">
+                <span class="label">Livello Minaccia</span>
+                <div class="diff-row">
+                    <button class="btn-diff" data-v="0">Low</button>
+                    <button class="btn-diff active" data-v="1">Mid</button>
+                    <button class="btn-diff" data-v="2">Elite</button>
+                </div>
+            </div>
+
+            <button class="btn-main" id="startBtn">Enter The Grid</button>
+        </div>
+
+        <div id="gameOver" class="overlay hidden">
+            <h1 id="resTitle">CONNESSIONE PERSA</h1>
+            <p id="resMsg" style="margin-bottom: 10px; color: #666; font-size: 0.8rem;"></p>
+            <p id="resKills" style="margin-bottom: 25px; font-weight: bold; color: var(--cyber-blue); letter-spacing: 2px;"></p>
+            <button class="btn-main" id="retryBtn">Re-Link</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tronCanvas');
+        const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
+        const gameOverPanel = document.getElementById('gameOver');
+        const startBtn = document.getElementById('startBtn');
+        const retryBtn = document.getElementById('retryBtn');
+        const colorPicker = document.getElementById('colorPicker');
+        const turboFill = document.getElementById('turbo-fill');
+
+        const NEON_COLORS = [
+            '#00f2ff', // Cyan
+            '#ff00ff', // Pink
+            '#39ff14', // Lime
+            '#fefe00', // Yellow
+            '#9d00ff', // Purple
+            '#ff003c'  // Red
+        ];
+
+        let settings = {
+            gridSize: 160, 
+            playerColor: NEON_COLORS[0],
+            difficulty: 1,
+            cell: 0
+        };
+
+        let game = {
+            active: false,
+            cycles: [],
+            lastTime: 0,
+            speed: 65,
+            turboActive: false,
+            turboCharge: 100,
+            kills: 0
+        };
+
+        // UI Setup
+        NEON_COLORS.forEach((color, i) => {
+            const btn = document.createElement('div');
+            btn.className = 'color-circle' + (i === 0 ? ' active' : '');
+            btn.style.backgroundColor = color;
+            btn.style.color = color;
+            btn.onclick = () => {
+                document.querySelectorAll('.color-circle').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                settings.playerColor = color;
+            };
+            colorPicker.appendChild(btn);
+        });
+
+        document.querySelectorAll('.btn-diff').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.btn-diff').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                settings.difficulty = parseInt(btn.dataset.v);
+            };
+        });
+
+        class Cycle {
+            constructor(id, x, y, dx, dy, color, isPlayer = false) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.dx = dx;
+                this.dy = dy;
+                this.color = color;
+                this.isPlayer = isPlayer;
+                this.trail = []; 
+                this.alive = true;
+                this.nextDir = { dx, dy };
+            }
+
+            move() {
+                if (!this.alive) return;
+                this.trail.push({ x: this.x, y: this.y });
+                this.dx = this.nextDir.dx;
+                this.dy = this.nextDir.dy;
+                this.x += this.dx;
+                this.y += this.dy;
+
+                if (this.x < 0 || this.x >= settings.gridSize || this.y < 0 || this.y >= settings.gridSize) {
+                    this.die();
+                }
+            }
+
+            die() {
+                this.alive = false;
+                if (!this.isPlayer) {
+                    // Dissoluzione digitale
+                    let fade = setInterval(() => {
+                        if (this.trail.length > 0) this.trail.shift();
+                        else clearInterval(fade);
+                    }, 30);
+                }
+            }
+
+            setDir(nx, ny) {
+                if (nx !== 0 && this.dx !== 0) return;
+                if (ny !== 0 && this.dy !== 0) return;
+                this.nextDir = { dx: nx, dy: ny };
+            }
+
+            ai() {
+                if (!this.alive) return;
+                const look = settings.difficulty === 0 ? 4 : (settings.difficulty === 1 ? 8 : 15);
+                let blocked = false;
+
+                for(let i=1; i<=look; i++) {
+                    if (this.testCollision(this.x + this.dx*i, this.y + this.dy*i)) {
+                        blocked = true; break;
+                    }
+                }
+
+                if (blocked || Math.random() < 0.04) {
+                    const options = [
+                        {dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}
+                    ].filter(o => {
+                        if (o.dx === -this.dx && o.dy === -this.dy) return false;
+                        return !this.testCollision(this.x + o.dx, this.y + o.dy);
+                    });
+
+                    if (options.length > 0) {
+                        if (settings.difficulty === 2) {
+                            options.sort((a, b) => this.evalSpace(a) - this.evalSpace(b));
+                            this.setDir(options[options.length-1].dx, options[options.length-1].dy);
+                        } else {
+                            const choice = options[Math.floor(Math.random() * options.length)];
+                            this.setDir(choice.dx, choice.dy);
+                        }
+                    }
+                }
+            }
+
+            testCollision(tx, ty) {
+                if (tx < 0 || tx >= settings.gridSize || ty < 0 || ty >= settings.gridSize) return true;
+                for(let c of game.cycles) {
+                    if (!c.alive && c.trail.length === 0) continue;
+                    for(let p of c.trail) {
+                        if (p.x === tx && p.y === ty) return true;
+                    }
+                }
+                return false;
+            }
+
+            evalSpace(dir) {
+                let s = 0;
+                let tx = this.x + dir.dx;
+                let ty = this.y + dir.dy;
+                for(let i=0; i<25; i++) {
+                    if (this.testCollision(tx, ty)) break;
+                    s++; tx += dir.dx; ty += dir.dy;
+                }
+                return s;
+            }
+
+            draw() {
+                if (this.trail.length === 0 && !this.alive) return;
+                
+                const isBoosted = this.isPlayer && game.turboActive;
+                
+                // Disegno Scia (Sotto-bagliore)
+                ctx.lineWidth = settings.cell * (isBoosted ? 1.4 : 1.1);
+                ctx.lineCap = 'butt';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = this.color;
+                ctx.shadowBlur = isBoosted ? 30 : 15;
+                ctx.shadowColor = this.color;
+
+                if (this.trail.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.trail[0].x * settings.cell + settings.cell/2, this.trail[0].y * settings.cell + settings.cell/2);
+                    for(let p of this.trail) {
+                        ctx.lineTo(p.x * settings.cell + settings.cell/2, p.y * settings.cell + settings.cell/2);
+                    }
+                    if (this.alive) {
+                        ctx.lineTo(this.x * settings.cell + settings.cell/2, this.y * settings.cell + settings.cell/2);
+                    }
+                    ctx.stroke();
+
+                    // Linea interna bianca (Core luminoso)
+                    ctx.shadowBlur = 0;
+                    ctx.lineWidth = settings.cell * 0.3;
+                    ctx.strokeStyle = "rgba(255,255,255,0.8)";
+                    ctx.stroke();
+                }
+
+                // Disegno Testa
+                if (this.alive) {
+                    ctx.fillStyle = "#fff";
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = this.color;
+                    ctx.fillRect(this.x * settings.cell - 1, this.y * settings.cell - 1, settings.cell + 2, settings.cell + 2);
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function start() {
+            resize();
+            game.kills = 0;
+            game.turboCharge = 100;
+            updateHUD();
+            
+            const center = Math.floor(settings.gridSize / 2);
+            const otherColors = NEON_COLORS.filter(c => c !== settings.playerColor).sort(() => Math.random() - 0.5);
+
+            game.cycles = [
+                new Cycle(0, 30, center, 1, 0, settings.playerColor, true),
+                new Cycle(1, settings.gridSize - 31, center, -1, 0, otherColors[0]),
+                new Cycle(2, center, 30, 0, 1, otherColors[1]),
+                new Cycle(3, center, settings.gridSize - 31, 0, -1, otherColors[2])
+            ];
+
+            game.active = true;
+            game.lastTime = performance.now();
+            menu.classList.add('hidden');
+            gameOverPanel.classList.add('hidden');
+            loop();
+        }
+
+        function updateHUD() {
+            document.getElementById('player-kills').innerText = `FRAGS: ${game.kills.toString().padStart(2, '0')}`;
+            const aliveAI = game.cycles.filter(c => c.alive && !c.isPlayer).length;
+            document.getElementById('ai-count').innerText = `HOSTS: ${aliveAI.toString().padStart(2, '0')}`;
+        }
+
+        function loop(now) {
+            if (!game.active) return;
+            requestAnimationFrame(loop);
+
+            if (game.turboActive && game.turboCharge > 0) {
+                game.turboCharge -= 2;
+            } else {
+                game.turboActive = false;
+                if (game.turboCharge < 100) game.turboCharge += 0.4;
+            }
+            turboFill.style.width = `${game.turboCharge}%`;
+            turboFill.style.boxShadow = `0 0 10px ${game.turboCharge < 20 ? 'var(--cyber-red)' : 'var(--cyber-pink)'}`;
+
+            const currentSpeed = game.turboActive ? game.speed / 2.5 : game.speed;
+
+            if (now - game.lastTime < currentSpeed) return;
+            game.lastTime = now;
+
+            game.cycles.forEach(c => {
+                if (c.alive && !c.isPlayer) c.ai();
+                c.move();
+            });
+
+            // Collisioni
+            for(let c of game.cycles) {
+                if (!c.alive) continue;
+                for(let other of game.cycles) {
+                    if (!other.alive && other.trail.length === 0) continue;
+                    
+                    // Scie
+                    for(let i=0; i < (other.id === c.id ? other.trail.length - 1 : other.trail.length); i++) {
+                        let p = other.trail[i];
+                        if (c.x === p.x && c.y === p.y) {
+                            c.die();
+                            if (other.isPlayer && !c.isPlayer) game.kills++;
+                            break;
+                        }
+                    }
+                    if (!c.alive) break;
+
+                    // Heads
+                    if (other.id !== c.id && other.alive && c.x === other.x && c.y === other.y) {
+                        c.die(); other.die();
+                    }
+                }
+            }
+
+            // Render Arena
+            ctx.fillStyle = 'rgba(2, 2, 5, 0.4)'; // Motion blur leggero
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Grid Cyberpunk
+            ctx.strokeStyle = 'rgba(0, 242, 255, 0.05)';
+            ctx.lineWidth = 1;
+            const step = 20;
+            for(let i=0; i<=settings.gridSize; i+=step) {
+                ctx.beginPath(); ctx.moveTo(i*settings.cell, 0); ctx.lineTo(i*settings.cell, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i*settings.cell); ctx.lineTo(canvas.width, i*settings.cell); ctx.stroke();
+            }
+
+            game.cycles.forEach(c => c.draw());
+            updateHUD();
+
+            const alive = game.cycles.filter(c => c.alive);
+            if (!game.cycles[0].alive) end("CONNECTION TERMINATED", "Trace route fallita.");
+            else if (alive.length === 1) end("GRID MASTER", "Accesso root confermato.");
+        }
+
+        function end(title, msg) {
+            game.active = false;
+            document.getElementById('resTitle').innerText = title;
+            document.getElementById('resMsg').innerText = msg;
+            document.getElementById('resKills').innerText = `FRAGS TOTALI: ${game.kills}`;
+            gameOverPanel.classList.remove('hidden');
+        }
+
+        function resize() {
+            const size = Math.min(window.innerWidth * 0.95, window.innerHeight * 0.8, 800);
+            canvas.width = size;
+            canvas.height = size;
+            settings.cell = size / settings.gridSize;
+        }
+
+        // Eventi
+        window.addEventListener('keydown', e => {
+            if (!game.active) return;
+            const p = game.cycles[0];
+            const k = e.key.toLowerCase();
+            if (k === 'arrowup' || k === 'w') p.setDir(0, -1);
+            if (k === 'arrowdown' || k === 's') p.setDir(0, 1);
+            if (k === 'arrowleft' || k === 'a') p.setDir(-1, 0);
+            if (k === 'arrowright' || k === 'd') p.setDir(1, 0);
+            if (e.key === ' ') game.turboActive = true;
+        });
+        window.addEventListener('keyup', e => { if (e.key === ' ') game.turboActive = false; });
+
+        let ts = null;
+        let tTimer = null;
+        canvas.addEventListener('touchstart', e => { 
+            ts = { x: e.touches[0].clientX, y: e.touches[0].clientY }; 
+            tTimer = setTimeout(() => { if(game.active) game.turboActive = true; }, 150);
+        });
+        canvas.addEventListener('touchend', () => { clearTimeout(tTimer); game.turboActive = false; });
+        canvas.addEventListener('touchmove', e => {
+            if (!ts || !game.active) return;
+            e.preventDefault();
+            const dx = e.touches[0].clientX - ts.x;
+            const dy = e.touches[0].clientY - ts.y;
+            if (Math.abs(dx) > 15 || Math.abs(dy) > 15) {
+                const p = game.cycles[0];
+                if (Math.abs(dx) > Math.abs(dy)) p.setDir(dx > 0 ? 1 : -1, 0);
+                else p.setDir(0, dy > 0 ? 1 : -1);
+                ts = null; clearTimeout(tTimer);
+            }
+        }, {passive: false});
+
+        startBtn.onclick = start;
+        retryBtn.onclick = () => location.reload();
+        window.onresize = resize;
+        resize();
+    </script>
+</body>
+</html>
