@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#020205">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Tronify: Cyber Neon Arena</title>
+    
+    <link id="manifest-link" rel="manifest">
+
+    <style>
+        :root {
+            --bg-dark: #020205;
+            --cyber-blue: #00f2ff;
+            --cyber-pink: #ff00ff;
+            --cyber-yellow: #fefe00;
+            --cyber-green: #39ff14;
+            --cyber-red: #ff003c;
+            --panel-bg: rgba(5, 5, 15, 0.95);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #crt-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        #game-container {
+            position: relative;
+            width: 98vmin;
+            height: 98vmin;
+            max-width: 700px;
+            max-height: 700px;
+            background: #000;
+            border: 2px solid rgba(0, 242, 255, 0.3);
+            box-shadow: 0 0 40px rgba(0, 242, 255, 0.15);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--panel-bg);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            transition: opacity 0.4s ease;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 10vw, 3.5rem);
+            margin-bottom: 0.5rem;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            text-shadow: 3px 3px var(--cyber-pink), -2px -2px var(--cyber-blue);
+            font-weight: 900;
+        }
+
+        .section { margin-bottom: 15px; width: 100%; max-width: 300px; }
+        .label { 
+            display: block; 
+            font-size: 0.65rem; 
+            color: var(--cyber-blue); 
+            text-transform: uppercase; 
+            margin-bottom: 8px; 
+            letter-spacing: 2px; 
+            font-weight: bold;
+        }
+
+        .color-grid { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .color-box {
+            width: 32px; height: 32px; border-radius: 4px; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.1); transition: 0.2s;
+        }
+        .color-box.active { border-color: #fff; transform: scale(1.15); box-shadow: 0 0 15px currentColor; }
+
+        .option-row { display: flex; gap: 6px; }
+        .btn-opt {
+            flex: 1; padding: 10px; background: rgba(0, 242, 255, 0.05); 
+            border: 1px solid var(--cyber-blue); color: var(--cyber-blue); 
+            cursor: pointer; font-size: 0.65rem; text-transform: uppercase;
+            border-radius: 4px; font-weight: bold;
+        }
+        .btn-opt.active { background: var(--cyber-blue); color: #000; }
+
+        .btn-start {
+            margin-top: 20px; padding: 14px 40px; font-size: 1.1rem;
+            background: transparent; color: #fff; border: 2px solid #fff;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 4px;
+            transition: 0.3s; font-weight: bold; border-radius: 4px;
+        }
+        .btn-start:hover { background: #fff; color: #000; box-shadow: 0 0 25px #fff; }
+
+        input#nick-input {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--cyber-blue);
+            color: #fff; padding: 12px; text-align: center; width: 100%;
+            text-transform: uppercase; border-radius: 4px; outline: none;
+        }
+
+        #hud {
+            position: absolute; top: 15px; left: 15px; right: 15px;
+            display: flex; justify-content: space-between;
+            font-size: 0.7rem; color: var(--cyber-blue);
+            pointer-events: none; z-index: 50; font-weight: 900;
+        }
+
+        #turbo-container {
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            width: 150px; height: 3px; background: rgba(255,255,255,0.1);
+            pointer-events: none; z-index: 50; border-radius: 2px;
+        }
+        #turbo-bar { width: 100%; height: 100%; background: var(--cyber-pink); box-shadow: 0 0 10px var(--cyber-pink); border-radius: 2px; }
+
+        #leaderboard {
+            width: 100%; max-width: 300px; margin-top: 15px; font-size: 0.7rem;
+            border-top: 1px solid rgba(0, 242, 255, 0.2); padding-top: 10px;
+        }
+        .leader-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+        .hidden { display: none !important; }
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
+        #pwa-install-btn {
+            position: absolute; bottom: 10px; right: 10px;
+            background: rgba(0, 242, 255, 0.1); border: 1px solid var(--cyber-blue);
+            color: var(--cyber-blue); font-size: 0.55rem; padding: 6px 10px;
+            cursor: pointer; border-radius: 4px; z-index: 1001;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="crt-overlay"></div>
+    <button id="pwa-install-btn" class="hidden">INSTALLA</button>
+
+    <div id="game-container">
+        <div id="hud">
+            <div>FRAGS: <span id="kill-count">00</span></div>
+            <div id="new-record-txt" class="blink hidden" style="color:var(--cyber-yellow)">RECORD!</div>
+            <div>IA: <span id="ai-count">03</span></div>
+        </div>
+
+        <div id="turbo-container"><div id="turbo-bar"></div></div>
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="menu" class="overlay">
+            <h1>TRONIFY</h1>
+            
+            <div class="section">
+                <input type="text" id="nick-input" placeholder="NICKNAME" maxlength="10">
+                <div id="auth-info" style="font-size: 0.55rem; color: var(--cyber-green); margin-top: 4px; letter-spacing: 1px;">AUTENTICAZIONE...</div>
+            </div>
+
+            <div class="section">
+                <span class="label">Colore Ciclo</span>
+                <div class="color-grid" id="color-picker"></div>
+            </div>
+
+            <div class="section">
+                <span class="label">IA Nemica</span>
+                <div class="option-row" id="diff-row">
+                    <button class="btn-opt" data-d="0">Base</button>
+                    <button class="btn-opt active" data-d="1">Mid</button>
+                    <button class="btn-opt" data-d="2">Elite</button>
+                </div>
+            </div>
+
+            <button class="btn-start" id="btn-start">AVVIA GRIGLIA</button>
+
+            <div id="leaderboard">
+                <span class="label">Top Globali</span>
+                <div id="leader-list">
+                    <div style="font-size: 0.6rem; color: #555;">Sincronizzazione...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="end-screen" class="overlay hidden">
+            <h1 id="end-title" style="font-size: 1.8rem;">SISTEMA OFFLINE</h1>
+            <p id="end-msg" style="color: #888; margin-bottom: 10px; font-size: 0.8rem;"></p>
+            <p id="end-stats" style="color: var(--cyber-blue); font-weight: bold; margin-bottom: 20px; font-size: 1.4rem;"></p>
+            <div id="sync-status" style="font-size: 0.6rem; margin-bottom: 15px;"></div>
+            <button class="btn-start" onclick="location.reload()">RIGIOCA</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'tronify-v4';
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const turboBar = document.getElementById('turbo-bar');
+        const leaderList = document.getElementById('leader-list');
+
+        const NEON_PALETTE = ['#00f2ff', '#ff00ff', '#39ff14', '#fefe00', '#ff003c', '#9d00ff'];
+        let config = { gridSize: 120, playerColor: NEON_PALETTE[0], difficulty: 1, speed: 65, cellSize: 0 };
+        let state = { active: false, cycles: [], lastTick: 0, turboCharge: 100, isTurbo: false, kills: 0, best: 0, user: null };
+
+        // --- AUTH & DATA ---
+        const initAuth = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        };
+
+        onAuthStateChanged(auth, async (u) => {
+            if (u) {
+                state.user = u;
+                document.getElementById('auth-info').innerText = "ID: " + u.uid.substring(0, 10).toUpperCase();
+                
+                // Fetch profilo privato
+                const pRef = doc(db, 'artifacts', appId, 'users', u.uid, 'profile', 'data');
+                const snap = await getDoc(pRef);
+                if (snap.exists()) {
+                    const d = snap.data();
+                    if (d.nick) document.getElementById('nick-input').value = d.nick;
+                    state.best = d.best || 0;
+                }
+                
+                // Leaderboard pubblica
+                const q = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+                onSnapshot(q, (s) => {
+                    const list = [];
+                    s.forEach(d => list.push(d.data()));
+                    list.sort((a, b) => b.score - a.score);
+                    leaderList.innerHTML = list.slice(0, 5).map((x, i) => `
+                        <div class="leader-item">
+                            <span>${i+1}. ${x.name || 'PILOTA'}</span>
+                            <span style="color:var(--cyber-pink)">${x.score}</span>
+                        </div>
+                    `).join('') || 'Griglia vuota.';
+                }, (err) => console.log("LB Error", err));
+            }
+        });
+
+        const saveScore = async () => {
+            if (!state.user) return;
+            const nick = document.getElementById('nick-input').value.trim() || "PILOTA_" + state.user.uid.substring(0, 4);
+            const status = document.getElementById('sync-status');
+            status.innerText = "SINCRO...";
+            
+            try {
+                // Aggiorna Record Personale
+                const newBest = Math.max(state.best, state.kills);
+                await setDoc(doc(db, 'artifacts', appId, 'users', state.user.uid, 'profile', 'data'), {
+                    nick, best: newBest, lastUpdate: Date.now()
+                }, { merge: true });
+
+                // Aggiorna Classifica se record battuto
+                if (state.kills > 0) {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', state.user.uid), {
+                        name: nick, score: state.kills, ts: Date.now()
+                    }, { merge: true });
+                }
+                status.innerText = "SINCRO OK";
+                status.style.color = "var(--cyber-green)";
+            } catch (e) {
+                status.innerText = "ERRORE SINCRO";
+                status.style.color = "var(--cyber-red)";
+            }
+        };
+
+        // --- GAME LOGIC ---
+        class Cycle {
+            constructor(id, x, y, dx, dy, color, isPlayer = false) {
+                this.id = id; this.x = x; this.y = y; this.dx = dx; this.dy = dy;
+                this.color = color; this.isPlayer = isPlayer;
+                this.trail = []; this.alive = true; this.nextDir = { dx, dy };
+            }
+
+            update() {
+                if (!this.alive) return;
+                this.trail.push({ x: this.x, y: this.y });
+                this.dx = this.nextDir.dx; this.dy = this.nextDir.dy;
+                this.x += this.dx; this.y += this.dy;
+                if (this.x < 0 || this.x >= config.gridSize || this.y < 0 || this.y >= config.gridSize) this.die();
+            }
+
+            setDirection(nx, ny) {
+                if (nx !== 0 && this.dx !== 0) return;
+                if (ny !== 0 && this.dy !== 0) return;
+                this.nextDir = { dx: nx, dy: ny };
+            }
+
+            ai() {
+                if (!this.alive) return;
+                const look = config.difficulty === 0 ? 5 : (config.difficulty === 1 ? 12 : 25);
+                let needsTurn = this.isWall(this.x + this.dx, this.y + this.dy);
+                
+                if (!needsTurn) {
+                    for(let i=1; i<=look; i++) if (this.isWall(this.x + this.dx*i, this.y + this.dy*i)) { needsTurn = true; break; }
+                }
+
+                if (needsTurn || Math.random() < 0.01) {
+                    const opts = [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}].filter(o => {
+                        if (o.dx === -this.dx && o.dy === -this.dy) return false;
+                        return !this.isWall(this.x + o.dx, this.y + o.dy);
+                    });
+                    if (opts.length > 0) {
+                        opts.sort((a,b) => this.scoreDir(b) - this.scoreDir(a));
+                        this.setDirection(opts[0].dx, opts[0].dy);
+                    }
+                }
+            }
+
+            isWall(tx, ty) {
+                if (tx < 0 || tx >= config.gridSize || ty < 0 || ty >= config.gridSize) return true;
+                for(const c of state.cycles) {
+                    for(const p of c.trail) if (p.x === tx && p.y === ty) return true;
+                    if (c.alive && c.x === tx && c.y === ty && c.id !== this.id) return true;
+                }
+                return false;
+            }
+
+            scoreDir(d) {
+                let s = 0, tx = this.x + d.dx, ty = this.y + d.dy;
+                while(s < 40 && !this.isWall(tx, ty)) { s++; tx += d.dx; ty += d.dy; }
+                return s;
+            }
+
+            die() {
+                this.alive = false;
+                if (!this.isPlayer) {
+                    let interval = setInterval(() => {
+                        if (this.trail.length > 0) this.trail.shift();
+                        else clearInterval(interval);
+                    }, 40);
+                }
+            }
+
+            draw() {
+                if (this.trail.length === 0 && !this.alive) return;
+                const isT = this.isPlayer && state.isTurbo;
+                ctx.lineWidth = config.cellSize * (isT ? 1.8 : 1.2);
+                ctx.strokeStyle = this.color;
+                ctx.shadowBlur = isT ? 20 : 10;
+                ctx.shadowColor = this.color;
+
+                ctx.beginPath();
+                if (this.trail.length > 0) {
+                    ctx.moveTo(this.trail[0].x * config.cellSize + config.cellSize/2, this.trail[0].y * config.cellSize + config.cellSize/2);
+                    for(const p of this.trail) ctx.lineTo(p.x * config.cellSize + config.cellSize/2, p.y * config.cellSize + config.cellSize/2);
+                } else {
+                    ctx.moveTo(this.x * config.cellSize + config.cellSize/2, this.y * config.cellSize + config.cellSize/2);
+                }
+                if (this.alive) ctx.lineTo(this.x * config.cellSize + config.cellSize/2, this.y * config.cellSize + config.cellSize/2);
+                ctx.stroke();
+
+                if (this.alive) {
+                    ctx.fillStyle = "#fff";
+                    ctx.shadowBlur = 15;
+                    ctx.fillRect(this.x * config.cellSize, this.y * config.cellSize, config.cellSize, config.cellSize);
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        const resize = () => {
+            const size = Math.min(window.innerWidth * 0.98, window.innerHeight * 0.85, 700);
+            canvas.width = size; canvas.height = size;
+            config.cellSize = size / config.gridSize;
+        };
+
+        const loop = (t) => {
+            if (!state.active) return;
+            requestAnimationFrame(loop);
+
+            if (state.isTurbo && state.turboCharge > 0) state.turboCharge -= 2.5;
+            else { state.isTurbo = false; if (state.turboCharge < 100) state.turboCharge += 0.5; }
+            turboBar.style.width = state.turboCharge + "%";
+
+            const step = state.isTurbo ? config.speed / 2.5 : config.speed;
+            if (t - state.lastTick < step) return;
+            state.lastTick = t;
+
+            state.cycles.forEach(c => { if(c.alive && !c.isPlayer) c.ai(); c.update(); });
+
+            // Collisioni
+            for(const c of state.cycles) {
+                if (!c.alive) continue;
+                for(const other of state.cycles) {
+                    if (!other.alive && other.trail.length === 0) continue;
+                    for(let i=0; i < (other.id === c.id ? other.trail.length - 1 : other.trail.length); i++) {
+                        const p = other.trail[i];
+                        if (c.x === p.x && c.y === p.y) {
+                            c.die();
+                            if (other.isPlayer && !c.isPlayer) {
+                                state.kills++;
+                                if (state.kills > state.best) document.getElementById('new-record-txt').classList.remove('hidden');
+                            }
+                        }
+                    }
+                    if (other.id !== c.id && other.alive && c.x === other.x && c.y === other.y) { c.die(); other.die(); }
+                }
+            }
+
+            ctx.fillStyle = 'rgba(2, 2, 5, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            state.cycles.forEach(c => c.draw());
+
+            document.getElementById('kill-count').innerText = state.kills.toString().padStart(2, '0');
+            const aiAlive = state.cycles.filter(c => c.alive && !c.isPlayer).length;
+            document.getElementById('ai-count').innerText = aiAlive.toString().padStart(2, '0');
+
+            if (!state.cycles[0].alive) end("SISTEMA CORROTTO", "Sei stato eliminato dalla griglia.");
+            else if (aiAlive === 0) end("DOMINIO TOTALE", "Tutte le IA sono state disattivate.");
+        };
+
+        const end = (title, msg) => {
+            state.active = false;
+            document.getElementById('end-title').innerText = title;
+            document.getElementById('end-msg').innerText = msg;
+            document.getElementById('end-stats').innerText = `${state.kills} FRAGS`;
+            document.getElementById('end-screen').classList.remove('hidden');
+            saveScore();
+        };
+
+        // --- INPUTS ---
+        NEON_PALETTE.forEach((col, i) => {
+            const b = document.createElement('div');
+            b.className = 'color-box' + (i === 0 ? ' active' : '');
+            b.style.backgroundColor = col;
+            b.style.color = col;
+            b.onclick = () => {
+                document.querySelectorAll('.color-box').forEach(el => el.classList.remove('active'));
+                b.classList.add('active');
+                config.playerColor = col;
+            };
+            document.getElementById('color-picker').appendChild(b);
+        });
+
+        document.querySelectorAll('#diff-row .btn-opt').forEach(b => {
+            b.onclick = () => {
+                document.querySelectorAll('#diff-row .btn-opt').forEach(el => el.classList.remove('active'));
+                b.classList.add('active');
+                config.difficulty = parseInt(b.dataset.d);
+            };
+        });
+
+        const handleKey = (e) => {
+            if (!state.active) return;
+            const p = state.cycles[0];
+            const k = e.key.toLowerCase();
+            if (k === 'arrowup' || k === 'w') p.setDirection(0, -1);
+            if (k === 'arrowdown' || k === 's') p.setDirection(0, 1);
+            if (k === 'arrowleft' || k === 'a') p.setDirection(-1, 0);
+            if (k === 'arrowright' || k === 'd') p.setDirection(1, 0);
+            if (k === ' ' || e.shiftKey) state.isTurbo = true;
+        };
+
+        window.addEventListener('keydown', handleKey);
+        window.addEventListener('keyup', e => { if (e.key === ' ' || !e.shiftKey) state.isTurbo = false; });
+
+        let tStart = null;
+        canvas.addEventListener('touchstart', e => {
+            tStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            if (state.active) state.isTurbo = true;
+        }, {passive: false});
+
+        canvas.addEventListener('touchmove', e => {
+            if (!tStart || !state.active) return;
+            e.preventDefault();
+            const dx = e.touches[0].clientX - tStart.x;
+            const dy = e.touches[0].clientY - tStart.y;
+            if (Math.abs(dx) > 20 || Math.abs(dy) > 20) {
+                const p = state.cycles[0];
+                if (Math.abs(dx) > Math.abs(dy)) p.setDirection(dx > 0 ? 1 : -1, 0);
+                else p.setDirection(0, dy > 0 ? 1 : -1);
+                tStart = null;
+            }
+        }, {passive: false});
+        
+        canvas.addEventListener('touchend', () => state.isTurbo = false);
+
+        document.getElementById('btn-start').onclick = () => {
+            resize();
+            state.active = true; state.kills = 0; state.turboCharge = 100; state.lastTick = performance.now();
+            const mid = Math.floor(config.gridSize / 2);
+            const enemies = NEON_PALETTE.filter(c => c !== config.playerColor).sort(() => Math.random() - 0.5);
+            state.cycles = [
+                new Cycle(0, 20, mid, 1, 0, config.playerColor, true),
+                new Cycle(1, config.gridSize-21, mid, -1, 0, enemies[0]),
+                new Cycle(2, mid, 20, 0, 1, enemies[1]),
+                new Cycle(3, mid, config.gridSize-21, 0, -1, enemies[2])
+            ];
+            document.getElementById('menu').classList.add('hidden');
+            requestAnimationFrame(loop);
+        };
+
+        window.addEventListener('resize', resize);
+        initAuth();
+        resize();
+    </script>
+</body>
+</html>
+
